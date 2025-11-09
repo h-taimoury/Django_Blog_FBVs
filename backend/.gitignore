@@ -1,0 +1,24 @@
+# 1. Python Virtual Environment (The equivalent of node_modules)
+# This is the most important exclusion for dependencies.
+.venv/
+
+# 2. Local Runtime Files
+# The file-based database for local development.
+db.sqlite3
+
+# 3. Compiled Python Files
+# Temporary files generated during execution.
+*.pyc
+__pycache__/
+
+# 4. OS Files
+# Files created by macOS.
+.DS_Store
+
+# 5. Environment & Secret Management (If you add a .env file later)
+.env
+
+# 6. Django Deployment Artifacts (Placeholder for future development)
+# These folders are usually generated during the 'collectstatic' command.
+/static_root/
+/media/
