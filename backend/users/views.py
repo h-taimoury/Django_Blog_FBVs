@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 
 # Assuming UserSerializer is imported from your serializers file
@@ -50,64 +50,70 @@ def getUsers(request):
     return Response(serializer.data)
 
 
-@api_view(["POST"])  # Restrict this view to only POST requests
+@api_view(["POST"])
+@permission_classes([AllowAny])  # Allows unauthenticated access for registration
 def registerUser(request):
-    data = request.data
+    # 1. Instantiate the serializer with the request data
+    serializer = UserSerializer(data=request.data)
+
+    # 2. Check if the incoming data is VALID
+    if serializer.is_valid():
+        # 3. If valid, call save(). This executes the serializer's custom create()
+        #    method which calls User.objects.create_user() to hash the password securely.
+        user = serializer.save()
+
+        # 4. Prepare the success response data
+        response_data = {
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "message": "User registered successfully.",
+        }
+
+        # 5. Return success status (201 CREATED)
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 6. If NOT valid, return the detailed error messages (400 BAD REQUEST)
+    # This automatically handles missing fields, invalid emails, and duplicate emails.
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@permission_classes([IsAdminUser])
+def userDetail(request, pk):
     try:
-        # 1. Create the user object
-        user = User.objects.create(
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            email=data["email"],
-            password=make_password(
-                data["password"]
-            ),  # 2. Hash the password before creation
-        )
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # 3. Serialize and return the user with their token
-        serializer = UserSerializerWithToken(user, many=False)
-
-        # Successful creation returns a 200 OK (default DRF behavior)
+    # --- 1. GET (Retrieve a single user) ---
+    if request.method == "GET":
+        serializer = UserSerializer(user)
         return Response(serializer.data)
 
-    except:
-        # 4. Define a custom error message for duplicate email/username
-        message = {"detail": "User with this email already exists."}
+    # --- 2. PUT (Replace entire user object) ---
+    elif request.method == "PUT":
+        # data=request.data is the JSON/form data sent by the client
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # 5. Return the error message with a 400 Bad Request status code
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+    # --- 3. PATCH (Partially update user object) ---
+    elif request.method == "PATCH":
+        # 'partial=True' allows you to update only the fields provided in request.data
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # --- 4. DELETE (Remove user object) ---
+    elif request.method == "DELETE":
+        user.delete()
+        # Return a 204 No Content status on successful deletion
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(["GET"])
-@permission_classes([IsAdminUser])
-def getUserById(request, pk):
-    user = User.objects.get(id=pk)
-    serializer = UserSerializer(user, many=False)
-    return Response(serializer.data)
-
-
-# @api_view(["PUT"])
-# @permission_classes([IsAdminUser])
-# def updateUser(request, pk):
-#     user = User.objects.get(id=pk)
-
-#     data = request.data
-
-#     user.first_name = data["name"]
-#     user.username = data["email"]
-#     user.email = data["email"]
-#     user.is_staff = data["isAdmin"]
-
-#     user.save()
-
-#     serializer = UserSerializer(user, many=False)
-
-#     return Response(serializer.data)
-
-
-@api_view(["DELETE"])
-@permission_classes([IsAdminUser])
-def deleteUser(request, pk):
-    userForDeletion = User.objects.get(id=pk)
-    userForDeletion.delete()
-    return Response("User was deleted")
+    # Fallback response for unhandled methods (optional)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

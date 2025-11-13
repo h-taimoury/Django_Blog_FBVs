@@ -22,7 +22,9 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        user.set_password(password)  # Handles password hashing
+        user.set_password(
+            password
+        )  # Receives the raw password, hashes it and adds the hashed password in the password field of User object.
         user.save()
         return user
 
@@ -50,10 +52,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Required fields for Django's permission system
-    is_staff = models.BooleanField(default=False)
+    is_staff = models.BooleanField(
+        default=False
+    )  # This field grants the user access to the Django Admin site.
     is_active = models.BooleanField(
         default=True
-    )  # Can be used for account verification later
+    )  # This field is the primary switch to enable or disable a user account. If set to False, the user cannot log in at all.
 
     # Link the UserManager to the model
     objects = UserManager()
