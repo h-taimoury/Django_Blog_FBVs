@@ -8,14 +8,15 @@ from .views import (
     getUsers,
     userDetail,
     registerUser,
+    userProfile,
 )
 
 urlpatterns = [
     path("", getUsers, name="users"),
-    # path("me/", userProfile, name="user-profile"),
     path("register/", registerUser, name="register"),
+    path("me/", userProfile, name="me"),
     # The following two lines are for Simple JWT library
-    path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("login/", TokenObtainPairView.as_view(), name="login"),
     # path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path("<str:pk>/", userDetail, name="user-detail"),
+    path("<int:pk>/", userDetail, name="user-detail"),
 ]

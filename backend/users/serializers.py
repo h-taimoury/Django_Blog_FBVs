@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     # This uses the model's get_full_name() method implicitly or explicitly via a method field.
     full_name = serializers.SerializerMethodField()
 
-    # Define password explicitly as write-only for security and input control
+    # # Define password explicitly as write-only for security and input control
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -39,19 +39,24 @@ class UserSerializer(serializers.ModelSerializer):
             "password",
         )
         # Add read_only_fields for fields that shouldn't be modifiable via standard input
-        read_only_fields = ("id", "created_at")
+        read_only_fields = ["id", "full_name", "created_at"]
+        # extra_kwargs = {"password": {"write_only": True, "required": True}}
 
     def get_full_name(self, obj):
         # Uses the method defined in your User model
         return obj.get_full_name()
 
     # Create method (for POST/Registration)
+    # Todo: Remove the following commented create method later.
+    # def create(self, validated_data):
+    #     # Explicitly pop the required arguments for clarity and to prevent ambiguity
+    #     email = validated_data.pop("email")
+    #     password = validated_data.pop("password")
+    #     # Ensure password is included in validated_data for create_user to work
+    #     user = User.objects.create_user(email, password, **validated_data)
+    #     return user
     def create(self, validated_data):
-        # Explicitly pop the required arguments for clarity and to prevent ambiguity
-        email = validated_data.pop("email")
-        password = validated_data.pop("password")
-        # Ensure password is included in validated_data for create_user to work
-        user = User.objects.create_user(email, password, **validated_data)
+        user = User.objects.create_user(**validated_data)
         return user
 
     # Update method (for PUT/PATCH requests)
@@ -113,7 +118,18 @@ class UserSerializerWithToken(UserSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "first_name", "last_name", "email", "is_staff", "token"]
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "full_name",
+            "is_staff",
+            "is_active",
+            "created_at",
+            "password",
+            "token",
+        )
 
     def get_token(self, obj):
         token = RefreshToken.for_user(obj)
