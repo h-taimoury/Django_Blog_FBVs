@@ -60,7 +60,8 @@ def userDetail(request, pk):
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
-    # --- 2. PUT (Replace entire user object) ---
+    # --- 2. PUT ---
+    # * Fields email and password are required. Other fields are not. If we don't provide any of email and password fields, we get a validation error in serializer.is_valid() part.
     elif request.method == "PUT":
         # data=request.data is the JSON/form data sent by the client
         serializer = UserSerializer(user, data=request.data)

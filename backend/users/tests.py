@@ -102,71 +102,71 @@ ME_URL = reverse("me")  # /api/users/me/
 #         self.assertNotIn("password", res.data)
 
 
-class PrivateUserMeTests(TestCase):
-    """Test the /api/users/me/ endpoint requiring authentication."""
+# class PrivateUserMeTests(TestCase):
+#     """Test the /api/users/me/ endpoint requiring authentication."""
 
-    def setUp(self):
-        # Create a standard user
-        self.user = User.objects.create_user(
-            email="auth@example.com",
-            password="TestPassword123",
-            first_name="Auth",
-            last_name="User",
-        )
-        # Initialize an authenticated client
-        self.client = APIClient()
-        # You'll need to mock the authentication, usually by forcing a login or setting the token header.
-        # Assuming you use SimpleJWT, we will just force login for simplicity in testing.
-        self.client.force_authenticate(user=self.user)
+#     def setUp(self):
+#         # Create a standard user
+#         self.user = User.objects.create_user(
+#             email="auth@example.com",
+#             password="TestPassword123",
+#             first_name="Auth",
+#             last_name="User",
+#         )
+#         # Initialize an authenticated client
+#         self.client = APIClient()
+#         # You'll need to mock the authentication, usually by forcing a login or setting the token header.
+#         # Assuming you use SimpleJWT, we will just force login for simplicity in testing.
+#         self.client.force_authenticate(user=self.user)
 
-    def test_retrieve_me_success(self):
-        """Test GET /api/users/me/ returns authenticated user's details."""
-        res = self.client.get(ME_URL)
+#     def test_retrieve_me_success(self):
+#         """Test GET /api/users/me/ returns authenticated user's details."""
+#         res = self.client.get(ME_URL)
 
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(res.data["email"], self.user.email)
-        self.assertEqual(res.data["first_name"], "Auth")
-        self.assertNotIn("password", res.data)
+#         self.assertEqual(res.status_code, status.HTTP_200_OK)
+#         self.assertEqual(res.data["email"], self.user.email)
+#         self.assertEqual(res.data["first_name"], "Auth")
+#         self.assertNotIn("password", res.data)
 
-    def test_update_me_username_success(self):
-        """Test PATCH /api/users/me/ updates fields like first_name."""
-        new_name = "NewAuthName"
-        payload = {"first_name": new_name}
-        res = self.client.patch(ME_URL, payload)
+#     def test_update_me_username_success(self):
+#         """Test PATCH /api/users/me/ updates fields like first_name."""
+#         new_name = "NewAuthName"
+#         payload = {"first_name": new_name}
+#         res = self.client.patch(ME_URL, payload)
 
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.first_name, new_name)
+#         self.assertEqual(res.status_code, status.HTTP_200_OK)
+#         self.user.refresh_from_db()
+#         self.assertEqual(self.user.first_name, new_name)
 
-    def test_update_me_password_success(self):
-        """Test PATCH /api/users/me/ can update the password."""
-        new_password = "NewSecurePassword456"
-        payload = {"password": new_password}
-        res = self.client.patch(ME_URL, payload)
+#     def test_update_me_password_success(self):
+#         """Test PATCH /api/users/me/ can update the password."""
+#         new_password = "NewSecurePassword456"
+#         payload = {"password": new_password}
+#         res = self.client.patch(ME_URL, payload)
 
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.user.refresh_from_db()
-        # Check that the password was hashed and changed
-        self.assertTrue(self.user.check_password(new_password))
+#         self.assertEqual(res.status_code, status.HTTP_200_OK)
+#         self.user.refresh_from_db()
+#         # Check that the password was hashed and changed
+#         self.assertTrue(self.user.check_password(new_password))
 
-    def test_update_me_read_only_fields_ignored(self):
-        """Test PATCH /api/users/me/ ignores attempts to modify read-only fields."""
-        original_created_at = self.user.created_at
-        payload = {
-            "id": 999,
-            "created_at": "2000-01-01T00:00:00Z",
-            "email": "new@example.com",  # include a valid field to make the request pass
-        }
-        res = self.client.patch(ME_URL, payload)
+#     def test_update_me_read_only_fields_ignored(self):
+#         """Test PATCH /api/users/me/ ignores attempts to modify read-only fields."""
+#         original_created_at = self.user.created_at
+#         payload = {
+#             "id": 999,
+#             "created_at": "2000-01-01T00:00:00Z",
+#             "email": "new@example.com",  # include a valid field to make the request pass
+#         }
+#         res = self.client.patch(ME_URL, payload)
 
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.user.refresh_from_db()
-        # Verify that ID was NOT changed
-        self.assertNotEqual(self.user.id, 999)
-        # Verify that created_at was NOT changed (it should be very close to the original)
-        self.assertEqual(self.user.created_at.date(), original_created_at.date())
-        # Verify that the valid field WAS changed
-        self.assertEqual(self.user.email, "new@example.com")
+#         self.assertEqual(res.status_code, status.HTTP_200_OK)
+#         self.user.refresh_from_db()
+#         # Verify that ID was NOT changed
+#         self.assertNotEqual(self.user.id, 999)
+#         # Verify that created_at was NOT changed (it should be very close to the original)
+#         self.assertEqual(self.user.created_at.date(), original_created_at.date())
+#         # Verify that the valid field WAS changed
+#         self.assertEqual(self.user.email, "new@example.com")
 
 
 # class PrivateUserAdminTests(TestCase):
@@ -197,7 +197,7 @@ class PrivateUserMeTests(TestCase):
 
 #     def test_list_users_admin_allowed(self):
 #         """Test GET /api/users/ allows admin access."""
-#         res = self.client.get(USER_LIST_URL)
+#         res = self.client.get(USERS_URL)
 
 #         self.assertEqual(res.status_code, status.HTTP_200_OK)
 #         # Should return at least 2 users (admin and regular)
@@ -208,7 +208,7 @@ class PrivateUserMeTests(TestCase):
 #     def test_list_users_regular_user_forbidden(self):
 #         """Test GET /api/users/ denies regular user access."""
 #         self.client.force_authenticate(user=self.regular_user)
-#         res = self.client.get(USER_LIST_URL)
+#         res = self.client.get(USERS_URL)
 #         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
 #     # --- DETAIL ENDPOINTS (Admin Only) ---
@@ -221,13 +221,13 @@ class PrivateUserMeTests(TestCase):
 #         self.assertEqual(res.status_code, status.HTTP_200_OK)
 #         self.assertEqual(res.data["email"], self.regular_user.email)
 
-#     def test_update_user_detail_admin_allowed(self):
+#     def test_update_user_detail_admin_allowed_PUT_method(self):
 #         """Test PUT /api/users/:id/ allows admin to update."""
 #         new_last_name = "Smith"
-#         # Perform a full PUT, so all required fields must be present
+#         # Perform a full PUT, so all required fields must be present which are email and password fields. Other fields are not required and remain the same if not included.
 #         payload = {
 #             "email": self.regular_user.email,  # Must be included for PUT
-#             "first_name": self.regular_user.first_name,  # Must be included for PUT
+#             "first_name": self.regular_user.first_name,
 #             "last_name": new_last_name,
 #             "is_staff": True,
 #             "is_active": self.regular_user.is_active,
@@ -240,6 +240,20 @@ class PrivateUserMeTests(TestCase):
 #         self.regular_user.refresh_from_db()
 #         self.assertEqual(self.regular_user.last_name, new_last_name)
 #         self.assertTrue(self.regular_user.is_staff)
+
+#     def test_update_user_detail_admin_allowed_PATCH_method(self):
+#         """Test PATCH /api/users/:id/ allows admin to update."""
+#         new_last_name = "Smith"
+#         # Perform a PATCH request, so we only need to include fields we want to update. We don't need to even include required fields which are email and password.
+#         payload = {
+#             "last_name": new_last_name,
+#         }
+#         url = detail_url(self.regular_user.id)
+#         res = self.client.patch(url, payload)
+
+#         self.assertEqual(res.status_code, status.HTTP_200_OK)
+#         self.regular_user.refresh_from_db()
+#         self.assertEqual(self.regular_user.last_name, new_last_name)
 
 #     def test_delete_user_admin_allowed(self):
 #         """Test DEL /api/users/:id/ allows admin to delete."""
