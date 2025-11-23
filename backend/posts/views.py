@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Post, Comment
@@ -42,9 +42,9 @@ def post_list_create(request):
         if serializer.is_valid():
             # 1. Save the post instance
             post_instance = serializer.save(author=request.user)
-
+            post_url = f"/posts/{post_instance.slug}-{post_instance.id}/"
             response_data = {
-                "url": post_instance.url,
+                "url": post_url,
                 "message": "Post created successfully.",
             }
 
@@ -117,39 +117,39 @@ def comment_create(request):
 
 
 @api_view(["GET", "PUT", "PATCH", "DELETE"])
-@permission_classes(
-    [AllowAny]
-)  # Permission is handled object-level in the function body
+@permission_classes([IsAuthorOrAdmin])
 def comment_detail(request, pk):
     """
-    GET: Retrieve a single comment (public).
-    PUT/PATCH/DELETE: Update/Delete a comment (author or admin only).
+    GET, PUT, PATCH, DELETE: Restricted to the author or an admin.
     """
     comment = get_object_or_404(Comment, pk=pk)
 
-    # --- GET (Retrieve) ---
-    if request.method == "GET":
-        # Note: The serializer will show 'is_approved' status. A separate
-        # endpoint might be needed to only show approved comments publicly.
-        serializer = CommentSerializer(comment)
-        return Response(serializer.data)
+    # --- MANUAL OBJECT-LEVEL PERMISSION CHECK ---
+    # In Function-Based Views (FBVs), DRF only runs has_permission automatically.
+    # We must manually run has_object_permission after retrieving the 'comment' object.
 
-    # --- PUT/PATCH/DELETE (Requires IsAuthorOrAdmin object permission) ---
+    permission_checker = IsAuthorOrAdmin()
 
-    # Instantiate the object-level permission check
-    permission = IsAuthorOrAdmin()
-
-    # Check if the user has permission for this specific comment object
-    if not permission.has_object_permission(request, comment_detail, comment):
+    if not permission_checker.has_object_permission(request, comment_detail, comment):
+        # This will catch non-author/non-admin users and return 403 Forbidden.
+        # Note: Unauthenticated users are already caught by the @permission_classes
+        # decorator (via IsAuthorOrAdmin.has_permission), which returns 401 Unauthorized.
         return Response(
             {
-                "detail": "Permission denied. You must be the author or an administrator to perform this action."
+                "detail": "Permission denied. You must be the author or an administrator to access this comment."
             },
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # The user is either the author or an admin, proceed with action
+    # --- RESTRICTED ACTIONS (Only Author/Admin can proceed from here) ---
 
+    # --- GET (Retrieve) ---
+    if request.method == "GET":
+        # The permission check above already restricts this method.
+        serializer = CommentSerializer(comment)
+        return Response(serializer.data)
+
+    # --- PUT/PATCH (Update) ---
     elif request.method in ["PUT", "PATCH"]:
         partial = request.method == "PATCH"
         serializer = CommentSerializer(comment, data=request.data, partial=partial)
@@ -165,6 +165,7 @@ def comment_detail(request, pk):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    # --- DELETE ---
     elif request.method == "DELETE":
         comment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

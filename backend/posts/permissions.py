@@ -24,13 +24,23 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 class IsAuthorOrAdmin(permissions.BasePermission):
     """
     Allow access to the object only if the user is the author OR is an admin.
-    This is used for PUT/PATCH/DELETE on existing comments.
     """
 
+    def has_permission(self, request, view):
+        # 1. Deny access immediately if user is anonymous for unsafe methods (PUT/PATCH/DELETE)
+        # For GET, we still need to check the object permission below.
+        # However, since you apply IsAuthorOrAdmin to all methods, we require authentication for all.
+        if not request.user or not request.user.is_authenticated:
+            # DRF will automatically handle 401 UNAUTHORIZED if necessary
+            return False
+
+        # Allow authenticated users to proceed to object-level check
+        return True
+
     def has_object_permission(self, request, view, obj):
-        # Admins (staff) always have permission
-        if request.user and request.user.is_staff:
+        # 1. Admins (staff) always have permission
+        if request.user.is_staff:
             return True
 
-        # Otherwise, only the object's author has permission
+        # 2. Only the object's author has permission
         return obj.author == request.user

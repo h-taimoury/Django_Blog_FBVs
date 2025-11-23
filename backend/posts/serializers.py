@@ -98,7 +98,7 @@ class PostDetailSerializer(PostListSerializer):
     def get_comment_count(self, obj):
         """Returns the number of approved comments for the post."""
         # Only count approved comments for public display
-        return obj.comments.filter(is_approved=True).count()
+        return obj.comment_set.filter(is_approved=True).count()
 
 
 # ----------------- 3. Write SERIALIZER -----------------

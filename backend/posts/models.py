@@ -1,5 +1,7 @@
 from django.db import models
-from django.conf import settings  # Best practice to import the custom User model
+from django.conf import (
+    settings,
+)  # Best practice to import the custom User model to use in other model.
 from django.utils.text import slugify
 
 # We reference the custom User model using settings.AUTH_USER_MODEL
