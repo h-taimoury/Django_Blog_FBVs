@@ -47,14 +47,6 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.get_full_name()
 
     # Create method (for POST/Registration)
-    # Todo: Remove the following commented create method later.
-    # def create(self, validated_data):
-    #     # Explicitly pop the required arguments for clarity and to prevent ambiguity
-    #     email = validated_data.pop("email")
-    #     password = validated_data.pop("password")
-    #     # Ensure password is included in validated_data for create_user to work
-    #     user = User.objects.create_user(email, password, **validated_data)
-    #     return user
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user

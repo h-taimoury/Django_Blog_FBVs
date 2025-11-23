@@ -18,7 +18,10 @@ class Post(models.Model):
     title = models.CharField(max_length=200, unique=True)
     slug = models.SlugField(max_length=200, blank=True)
     content = models.TextField()
-
+    excerpt = models.CharField(
+        max_length=300,
+        blank=True,
+    )
     # Management fields
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,14 +44,12 @@ class Post(models.Model):
 class Comment(models.Model):
     # Links the comment to the post it belongs to
     # on_delete=models.CASCADE means if the Post is deleted, all its comments are also deleted.
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
 
     # Links the comment to the user who wrote it
     # on_delete=models.SET_NULL means if the User is deleted, the comment remains, but the 'author' field is set to NULL.
     # This prevents the loss of comment history. 'null=True' is required for this.
-    author = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="comments"
-    )
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     # Comment body
     body = models.TextField()
