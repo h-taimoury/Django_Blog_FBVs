@@ -5,7 +5,6 @@ from rest_framework.response import Response
 # Assuming UserSerializer is imported from your serializers file
 from .serializers import UserSerializer, UserSerializerWithToken
 from rest_framework import status  # For custom error messages
-from django.contrib.auth.hashers import make_password  # To hash passwords securely
 from .models import User
 
 
@@ -29,7 +28,7 @@ def registerUser(request):
     if serializer.is_valid():
         # 3. If valid, call save(). This executes the serializer's custom create()
         #    method which calls User.objects.create_user() to hash the password securely.
-        user = serializer.save()
+        serializer.save()
 
         # 4. Prepare the success response data
         # response_data = {

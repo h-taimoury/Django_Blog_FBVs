@@ -10,7 +10,6 @@ from .serializers import (
     PostWriteSerializer,
     CommentSerializer,
 )
-from rest_framework import permissions  # Needed for BasePermission and SAFE_METHODS
 from .permissions import IsAdminOrReadOnly, IsAuthorOrAdmin
 
 # ---  Post Views ---
@@ -60,23 +59,29 @@ def post_detail(request, pk):
     GET: Retrieve post (must be published, or admin).
     PUT/PATCH/DELETE: Update/Delete post (admin only).
     """
-    # Use different filtering based on request method for security/visibility
-    if request.method in permissions.SAFE_METHODS and not request.user.is_staff:
-        # Public access: only published posts allowed
-        post = get_object_or_404(Post, pk=pk, is_published=True)
-    else:
-        # Admin access or unsafe methods: retrieve any post
-        post = get_object_or_404(Post, pk=pk)
 
     # --- GET (Retrieve) ---
     if request.method == "GET":
+        base_queryset = Post.objects.select_related("author").prefetch_related(
+            "comment_set__author"
+        )
+
+        if not request.user.is_staff:
+            # Public access: only published posts allowed
+            post = get_object_or_404(base_queryset, pk=pk, is_published=True)
+        else:
+            # Admin access
+            post = get_object_or_404(base_queryset, pk=pk)
+
         # When retrieving, we want the full nested data (including comments)
         serializer = PostDetailSerializer(post)
         return Response(serializer.data)
 
     # --- PUT/PATCH/DELETE (Admin Only) ---
     # IsAdminOrReadOnly ensures only staff users reach this point for unsafe methods
+
     elif request.method in ["PUT", "PATCH"]:
+        post = get_object_or_404(Post, pk=pk)
         partial = request.method == "PATCH"
         write_serializer = PostWriteSerializer(post, data=request.data, partial=partial)
 
@@ -91,6 +96,7 @@ def post_detail(request, pk):
         return Response(write_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == "DELETE":
+        post = get_object_or_404(Post, pk=pk)
         post.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -169,3 +175,14 @@ def comment_detail(request, pk):
     elif request.method == "DELETE":
         comment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# # --- 1. Define QuerySet based on Method (Conditional Optimization) ---
+#     if request.method == "GET":
+#         # FULL OPTIMIZATION: Needed for PostDetailSerializer to avoid N+1 queries
+#         # Fetches Author, Comments, and Comment Authors efficiently (approx. 3 queries total)
+#         base_queryset = Post.objects.select_related("author").prefetch_related("comments__author")
+#     else:
+#         # MINIMAL QUERYSET: For PUT/PATCH/DELETE. We only need the Post instance itself.
+#         # Stripping prefetch_related and select_related eliminates unnecessary database activity.
+#         base_queryset = Post.objects.all()

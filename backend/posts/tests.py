@@ -140,7 +140,12 @@ class AdminPostAPITests(TestCase):
         )
         self.payload = {
             "title": "New Post Title",
-            "content": "The new content of the post.",
+            "content": (
+                "<h2>Section Header</h2>"
+                "<p>This is the first paragraph. It contains some <strong>bold text</strong>.</p>"
+                "<ul><li>Item one</li><li>Item two</li></ul>"
+                '<p><a href="http://safe-link.com">Read More</a></p>'
+            ),
             "excerpt": "New excerpt.",
             "is_published": True,
         }
@@ -168,6 +173,34 @@ class AdminPostAPITests(TestCase):
         # Assert Minimal Response (URL needed for redirection)
         self.assertIn("url", res.data)
         self.assertIn("message", res.data)
+
+    def test_create_post_sanitizes_content_stripping_script_tag(self):
+        """Test POST /api/posts/ successfully strips malicious <script> tags from 'content'."""
+        malicious_content = (
+            "<h1>Safe Title</h1><script>alert('XSS attempt')</script><p>Safe text.</p>"
+        )
+        safe_content_expected = "<h1>Safe Title</h1>alert('XSS attempt')<p>Safe text.</p>"  # The <script> tag is removed
+
+        payload = self.payload.copy()
+        payload["content"] = malicious_content
+
+        # Ensure we are authenticated as admin
+        self.client.force_authenticate(user=self.admin)
+        res = self.client.post(POST_LIST_CREATE_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+
+        # Retrieve the post directly from the database
+        post = Post.objects.get(title=payload["title"])
+        # Assert that the dangerous script tag was stripped
+        # Note: If your bleach config allows <h1>, adjust safe_content_expected accordingly
+        self.assertNotIn("<script>", post.content.lower())
+        self.assertIn("safe title", post.content.lower())
+        self.assertIn("<p>", post.content.lower())
+        self.assertNotEqual(post.content, malicious_content)
+
+        # Optional: Assert the cleaned content matches the expected safe version
+        self.assertEqual(post.content, safe_content_expected)
 
     def test_create_post_regular_user_forbidden(self):
         """Test POST /api/posts/ is denied for regular authenticated users."""

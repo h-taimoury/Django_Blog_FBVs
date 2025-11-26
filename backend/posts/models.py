@@ -68,4 +68,8 @@ class Comment(models.Model):
 
     def __str__(self):
         # Display the first 50 characters of the comment body
-        return f"Comment by {self.author.email if self.author else 'Deleted User'} on {self.post.title[:30]}..."
+        body_snippet = self.body[:50].replace(
+            "\n", " "
+        )  # Safely get 50 chars and remove newlines
+
+        return f"Comment: '{body_snippet}...' by {self.author.email if self.author else 'Deleted User'} on Post: '{self.post.title[:30]}...'"

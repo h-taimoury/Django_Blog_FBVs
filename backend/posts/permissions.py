@@ -43,4 +43,5 @@ class IsAuthorOrAdmin(permissions.BasePermission):
             return True
 
         # 2. Only the object's author has permission
-        return obj.author == request.user
+        return obj.author_id == request.user.id
+        # In the line above, I used obj.author_id == request.user.id instead of obj.author == request.user because obj.author makes an unnecessary extra database call.

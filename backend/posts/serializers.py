@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Post, Comment
+import bleach
 
 # --- Setup ---
 User = get_user_model()
@@ -25,6 +26,9 @@ class AuthorSerializer(serializers.ModelSerializer):
 # ------------------------------------
 # --- Comment Serializer ---
 # ------------------------------------
+# Use a common, shared set of allowed tags (maybe slightly restricted for comments than content field of Post model)
+ALLOWED_COMMENT_TAGS = ["p", "br", "em", "strong", "a", "ul", "ol", "li"]
+ALLOWED_COMMENT_ATTRIBUTES = {"a": ["href", "title", "target"]}
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -46,6 +50,18 @@ class CommentSerializer(serializers.ModelSerializer):
         except Post.DoesNotExist:
             raise serializers.ValidationError("Cannot comment on a non-existent post.")
         return value
+
+    def validate_body(self, value):
+        """
+        Sanitize the incoming HTML content of the comment body.
+        """
+        cleaned_body = bleach.clean(
+            value,
+            tags=ALLOWED_COMMENT_TAGS,
+            attributes=ALLOWED_COMMENT_ATTRIBUTES,
+            strip=True,
+        )
+        return cleaned_body
 
 
 # ------------------------------------
@@ -102,6 +118,30 @@ class PostDetailSerializer(PostListSerializer):
 
 
 # ----------------- 3. Write SERIALIZER -----------------
+# Define which HTML tags and attributes are safe to allow
+ALLOWED_TAGS = [
+    "p",
+    "br",
+    "em",
+    "strong",
+    "a",
+    "ul",
+    "ol",
+    "li",
+    "h1",
+    "h2",
+    "h3",
+    "blockquote",
+    "img",
+    "pre",
+    "code",
+]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title", "target"],
+    "img": ["src", "alt", "width", "height"],
+}
+
+
 class PostWriteSerializer(serializers.ModelSerializer):
     """
     Serializer used for creating (POST) and updating (PUT/PATCH) a Post.
@@ -122,3 +162,17 @@ class PostWriteSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         """Generates the combined slug-ID URL for the post."""
         return f"/posts/{obj.slug}-{obj.id}/"
+
+    # Add a custom validation method for the content field
+    def validate_content(self, value):
+        """
+        Sanitize the incoming HTML content to prevent XSS attacks.
+        """
+        # Clean the HTML string, removing all disallowed tags and attributes
+        cleaned_content = bleach.clean(
+            value,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            strip=True,
+        )
+        return cleaned_content
